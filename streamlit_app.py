@@ -18,16 +18,12 @@ client = OpenAI(api_key=openai_api_key)
 
 class AssistantManager:
     assistant_id = st.secrets.assistant_id
-    vector_store_id = st.secrets.vector_store_id
 
     def __init__(self):
         self.client = client
         self.model = "gpt-4o"
         self.thread = None
         self.run = None
-        self.vector_store = self.client.beta.vector_stores.retrieve(
-            vector_store_id=AssistantManager.vector_store_id
-        )
         self.assistant = self.client.beta.assistants.retrieve(
             assistant_id=AssistantManager.assistant_id
         )
