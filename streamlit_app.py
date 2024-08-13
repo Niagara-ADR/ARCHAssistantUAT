@@ -5,7 +5,6 @@ from datetime import timedelta, datetime
 import pandas as pd
 import json
 import time
-from dateutil.relativedelta import relativedelta
 import pytz
 from typing_extensions import override
 from openai import AssistantEventHandler
@@ -259,6 +258,12 @@ ctx = get_script_run_ctx()
 
 user_id = ctx.session_id
 manager.start_beating(user_id)
+if "initial_question" not in st.session_state:
+    manager.add_message_to_thread(role="user", content="Give me a summary of the ARCH tickets.")
+    manager.run_assistant()
+    response = manager.wait_for_completion()
+    st.session_state.initial_question = True
+
 
 if prompt := st.chat_input("Message ARCH API Assistant"):
     st.session_state.messages.append({"role": "user", "content": prompt})
