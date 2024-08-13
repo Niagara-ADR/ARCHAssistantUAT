@@ -9,6 +9,10 @@ from dateutil.relativedelta import relativedelta
 import pytz
 from typing_extensions import override
 from openai import AssistantEventHandler
+import threading 
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime import get_instance
     
 st.title("ARCH UAT Ticket Assistant")
 
@@ -46,6 +50,7 @@ class AssistantManager:
         self.model = "gpt-3.5-turbo"
         self.thread = None
         self.run = None
+        self.file = None
         self.assistant = self.client.beta.assistants.retrieve(
             assistant_id=AssistantManager.assistant_id
         )
@@ -75,7 +80,10 @@ class AssistantManager:
         json = response.json()
         df = pd.DataFrame(json['response'])
         df_plants = pd.read_excel('Plant Acronyms.xlsx')
-
+        def lower(string):
+            string = string.lower()
+            return string.capitalize()
+        df_plants['Location Name'] = df_plants['Location Name'].map(lower)
         location_dict = pd.Series(df_plants['Location Name'].values, index=df_plants['Abbreviation']).to_dict()
         org_code_dict = pd.Series(df_plants['Organization Code'].values, index=df_plants['Abbreviation']).to_dict()
 
@@ -116,6 +124,8 @@ class AssistantManager:
             file=open("temp.xlsx", "rb"),
             purpose='assistants'
         )
+        self.file = file
+        print(self.file.id)
         thread = client.beta.threads.create(
             messages=[
                 {
@@ -214,6 +224,24 @@ class AssistantManager:
         print(f"Run-Steps::: {run_steps}")
         return run_steps.data
 
+    def start_beating(self, user_id):
+        thread = threading.Timer(interval=2, function= self.start_beating, args=(user_id,) )
+
+        add_script_run_ctx(thread)
+
+        ctx = get_script_run_ctx()     
+
+        runtime = get_instance()
+
+        if runtime.is_active_session(session_id=ctx.session_id):
+            thread.start()
+        else:
+            try:
+                self.client.files.delete(self.file.id)
+            except:
+                pass
+
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -226,6 +254,11 @@ if "assistant_manager" not in st.session_state:
     st.session_state.assistant_manager.create_thread()
 
 manager = st.session_state.assistant_manager
+
+ctx = get_script_run_ctx()
+
+user_id = ctx.session_id
+manager.start_beating(user_id)
 
 if prompt := st.chat_input("Message ARCH API Assistant"):
     st.session_state.messages.append({"role": "user", "content": prompt})
