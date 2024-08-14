@@ -115,6 +115,7 @@ class AssistantManager:
             df = df.drop('lastest_Message', axis=1)
             df = df.drop('comments', axis=1)
             df.sort_values(by='ticket_creation_date', ascending=False, inplace=True)
+            df.reset_index(drop=True, inplace=True)
         except:
             pass
         print(df)
@@ -144,6 +145,7 @@ class AssistantManager:
     
     def create_thread(self):
         if not self.thread:
+
             thread_obj = self.get_ticket_details()
             self.thread = thread_obj
             print(f"CREATED NEW THREAD: {self.thread.id}")
@@ -276,6 +278,7 @@ if prompt := st.chat_input("Message ARCH API Assistant"):
 
     with st.chat_message("assistant"):
         st.write(response)
+        st.write_stream()
 
     st.session_state.messages.append({"role": "assistant", "content": response})
 
