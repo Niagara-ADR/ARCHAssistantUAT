@@ -267,6 +267,25 @@ if "initial_question" not in st.session_state:
     response = manager.wait_for_completion()
     st.session_state.initial_question = True
 
+def callback():
+    if "my_stt_output" in st.session_state and st.session_state.my_stt_output:
+        output = st.session_state.my_stt_output
+    else:
+        return
+    with st.chat_message("user"):
+        st.markdown(output)
+    st.session_state.messages.append({"role": "user", "content": output})
+    manager.add_message_to_thread(role="user", content=output)
+    manager.run_assistant()
+    response = manager.wait_for_completion()
+    print(response)
+
+    with st.chat_message("assistant"):
+        st.write(response)
+
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+whisper_stt(openai_api_key= openai_api_key, language = 'en', callback=callback, key="my_stt")  
 
 if prompt := st.chat_input("Message ARCH API Assistant"):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -279,7 +298,7 @@ if prompt := st.chat_input("Message ARCH API Assistant"):
 
     with st.chat_message("assistant"):
         st.write(response)
-        st.write_stream()
+        # st.write_stream()
 
     st.session_state.messages.append({"role": "assistant", "content": response})
 
@@ -287,7 +306,3 @@ uploaded_file = st.file_uploader("Add an attachment", type=["pdf", "jpg", "png",
 
 if uploaded_file is not None:
     st.success(f"File {uploaded_file.name} uploaded successfully!")
-
-text = whisper_stt(openai_api_key= openai_api_key, language = 'en')  
-if text:
-    st.write(text)
