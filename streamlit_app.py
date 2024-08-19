@@ -209,7 +209,6 @@ class AssistantManager:
                 run_status = self.client.beta.threads.runs.retrieve(
                     thread_id=self.thread.id, run_id=self.run.id
                 )
-                print(run_status)
                 if run_status.status == "completed":
                     return self.process_message()
                 elif run_status.status == "requires_action":
