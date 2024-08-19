@@ -12,7 +12,8 @@ import threading
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime import get_instance
-    
+from whisper_stt import whisper_stt
+
 st.title("ARCH UAT Ticket Assistant")
 
 openai_api_key = st.secrets.openai_api_key
@@ -286,3 +287,7 @@ uploaded_file = st.file_uploader("Add an attachment", type=["pdf", "jpg", "png",
 
 if uploaded_file is not None:
     st.success(f"File {uploaded_file.name} uploaded successfully!")
+
+text = whisper_stt(openai_api_key= openai_api_key, language = 'en')  
+if text:
+    st.write(text)
