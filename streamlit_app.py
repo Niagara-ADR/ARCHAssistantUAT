@@ -173,12 +173,12 @@ class AssistantManager:
             response = last_message.content[0].text.value
             summary.append(response)
 
-        with client.beta.threads.runs.stream(
-            thread_id=self.thread.id,
-            assistant_id=AssistantManager.assistant_id,
-            event_handler=EventHandler(),
-        ) as stream:
-            stream.until_done()
+        # with client.beta.threads.runs.stream(
+        #     thread_id=self.thread.id,
+        #     assistant_id=AssistantManager.assistant_id,
+        #     event_handler=EventHandler(),
+        # ) as stream:
+        #     stream.until_done()
 
         self.summary = "\n".join(summary)
         return response
@@ -284,8 +284,6 @@ def callback():
 
     st.session_state.messages.append({"role": "assistant", "content": response})
 
-whisper_stt(openai_api_key= openai_api_key, language = 'en', callback=callback, key="my_stt")  
-
 if prompt := st.chat_input("Message ARCH API Assistant"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     manager.add_message_to_thread(role="user", content=prompt)
@@ -302,6 +300,8 @@ if prompt := st.chat_input("Message ARCH API Assistant"):
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 uploaded_file = st.file_uploader("Add an attachment", type=["pdf", "jpg", "png", "docx"])
+
+whisper_stt(openai_api_key= openai_api_key, language = 'en', callback=callback, key="my_stt")  
 
 if uploaded_file is not None:
     st.success(f"File {uploaded_file.name} uploaded successfully!")
