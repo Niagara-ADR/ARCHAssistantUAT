@@ -76,7 +76,7 @@ class AssistantManager:
         end_date=(datetime.now().date()).strftime('%Y-%m-%d')
         print(start_date)
         print(end_date)
-        response = requests.get('https://archapi.niagarawater.com/api/tickets/getAllTicketDetails?usecase_id=["60cb784aafe4530011138ca9"]&start_date={}&end_date={}'.format(start_date, end_date), headers = headers)
+        response = requests.get('https://archapi.niagarawater.com/api/tickets/getAllTicketDetails?usecase_id=[]&start_date={}&end_date={}'.format(start_date, end_date), headers = headers)
         json = response.json()
         df = pd.DataFrame(json['response'])
         df_plants = pd.read_excel('Plant Acronyms.xlsx')
