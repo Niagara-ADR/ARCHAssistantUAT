@@ -9,9 +9,9 @@ import pytz
 from typing_extensions import override
 from openai import AssistantEventHandler
 import threading 
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime import get_instance
+# from streamlit.runtime.scriptrunner import add_script_run_ctx
+# from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+# from streamlit.runtime import get_instance
 from whisper_stt import whisper_stt
 
 st.title("ARCH UAT Ticket Assistant")
@@ -225,22 +225,22 @@ class AssistantManager:
         print(f"Run-Steps::: {run_steps}")
         return run_steps.data
 
-    def start_beating(self, user_id):
-        thread = threading.Timer(interval=2, function= self.start_beating, args=(user_id,) )
+    # def start_beating(self, user_id):
+    #     thread = threading.Timer(interval=2, function= self.start_beating, args=(user_id,) )
 
-        add_script_run_ctx(thread)
+    #     add_script_run_ctx(thread)
 
-        ctx = get_script_run_ctx()     
+    #     ctx = get_script_run_ctx()     
 
-        runtime = get_instance()
+    #     runtime = get_instance()
 
-        if runtime.is_active_session(session_id=ctx.session_id):
-            thread.start()
-        else:
-            try:
-                self.client.files.delete(self.file.id)
-            except:
-                pass
+    #     if runtime.is_active_session(session_id=ctx.session_id):
+    #         thread.start()
+    #     else:
+    #         try:
+    #             self.client.files.delete(self.file.id)
+    #         except:
+    #             pass
 
 
 if "messages" not in st.session_state:
@@ -256,10 +256,10 @@ if "assistant_manager" not in st.session_state:
 
 manager = st.session_state.assistant_manager
 
-ctx = get_script_run_ctx()
+# ctx = get_script_run_ctx()
 
-user_id = ctx.session_id
-manager.start_beating(user_id)
+# user_id = ctx.session_id
+# manager.start_beating(user_id)
 if "initial_question" not in st.session_state:
     manager.add_message_to_thread(role="user", content="Give me a summary of the ARCH tickets.")
     manager.run_assistant()
