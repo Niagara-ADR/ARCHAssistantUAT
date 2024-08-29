@@ -120,9 +120,9 @@ class AssistantManager:
         except:
             pass
         print(df)
-        df.to_excel('temp.xlsx', index=False)
+        df.to_excel('temp_dev.xlsx', index=False)
         file = client.files.create(
-            file=open("temp.xlsx", "rb"),
+            file=open("temp_dev.xlsx", "rb"),
             purpose='assistants'
         )
         self.file = file
@@ -173,12 +173,12 @@ class AssistantManager:
             response = last_message.content[0].text.value
             summary.append(response)
 
-        # with client.beta.threads.runs.stream(
-        #     thread_id=self.thread.id,
-        #     assistant_id=AssistantManager.assistant_id,
-        #     event_handler=EventHandler(),
-        # ) as stream:
-        #     stream.until_done()
+        with client.beta.threads.runs.stream(
+            thread_id=self.thread.id,
+            assistant_id=AssistantManager.assistant_id,
+            event_handler=EventHandler(),
+        ) as stream:
+            stream.until_done()
 
         self.summary = "\n".join(summary)
         return response
