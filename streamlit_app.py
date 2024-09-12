@@ -1,3 +1,8 @@
+"""
+- If the user uploads an image, let the AI answer that
+- Add knowledge base to add all use cases
+"""
+
 import streamlit as st
 from openai import OpenAI
 import requests
@@ -8,10 +13,7 @@ import time
 import pytz
 from typing_extensions import override
 from openai import AssistantEventHandler
-import threading 
-# from streamlit.runtime.scriptrunner import add_script_run_ctx
-# from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-# from streamlit.runtime import get_instance
+import base64 
 from whisper_stt import whisper_stt
 
 st.title("ARCH UAT Ticket Assistant")
@@ -19,28 +21,6 @@ st.title("ARCH UAT Ticket Assistant")
 openai_api_key = st.secrets.openai_api_key
 
 client = OpenAI(api_key=openai_api_key)
-
-class EventHandler(AssistantEventHandler):    
-  @override
-  def on_text_created(self, text) -> None:
-    print(f"\nassistant > ", end="", flush=True)
-      
-  @override
-  def on_text_delta(self, delta, snapshot):
-    print(delta.value, end="", flush=True)
-      
-  def on_tool_call_created(self, tool_call):
-    print(f"\nassistant > {tool_call.type}\n", flush=True)
-  
-  def on_tool_call_delta(self, delta, snapshot):
-    if delta.type == 'code_interpreter':
-      if delta.code_interpreter.input:
-        print(delta.code_interpreter.input, end="", flush=True)
-      if delta.code_interpreter.outputs:
-        print(f"\n\noutput >", flush=True)
-        for output in delta.code_interpreter.outputs:
-          if output.type == "logs":
-            print(f"\n{output.logs}", flush=True)
 
 class AssistantManager:
     assistant_id = st.secrets.assistant_id
@@ -173,13 +153,6 @@ class AssistantManager:
             response = last_message.content[0].text.value
             summary.append(response)
 
-        with client.beta.threads.runs.stream(
-            thread_id=self.thread.id,
-            assistant_id=AssistantManager.assistant_id,
-            event_handler=EventHandler(),
-        ) as stream:
-            stream.until_done()
-
         self.summary = "\n".join(summary)
         return response
 
@@ -225,24 +198,6 @@ class AssistantManager:
         print(f"Run-Steps::: {run_steps}")
         return run_steps.data
 
-    # def start_beating(self, user_id):
-    #     thread = threading.Timer(interval=2, function= self.start_beating, args=(user_id,) )
-
-    #     add_script_run_ctx(thread)
-
-    #     ctx = get_script_run_ctx()     
-
-    #     runtime = get_instance()
-
-    #     if runtime.is_active_session(session_id=ctx.session_id):
-    #         thread.start()
-    #     else:
-    #         try:
-    #             self.client.files.delete(self.file.id)
-    #         except:
-    #             pass
-
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -256,10 +211,6 @@ if "assistant_manager" not in st.session_state:
 
 manager = st.session_state.assistant_manager
 
-# ctx = get_script_run_ctx()
-
-# user_id = ctx.session_id
-# manager.start_beating(user_id)
 if "initial_question" not in st.session_state:
     manager.add_message_to_thread(role="user", content="Give me a summary of the ARCH tickets.")
     manager.run_assistant()
@@ -284,24 +235,71 @@ def callback():
 
     st.session_state.messages.append({"role": "assistant", "content": response})
 
+def callback2():
+    if "image" in st.session_state:
+        del st.session_state['image']
+
 if prompt := st.chat_input("Message ARCH API Assistant"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    manager.add_message_to_thread(role="user", content=prompt)
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    manager.run_assistant()
-    response = manager.wait_for_completion()
-    print(response)
+    if "image" in st.session_state and st.session_state['image']:
+        print("IMAGE FOUND")
+        def encode_image(uploaded_file):
+            return base64.b64encode(uploaded_file.read()).decode('utf-8')
 
-    with st.chat_message("assistant"):
-        st.write(response)
-        # st.write_stream()
+        base64_image = encode_image(st.session_state.image)
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_api_key}"
+        }
 
-uploaded_file = st.file_uploader("Add an attachment", type=["pdf", "jpg", "png", "docx"])
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                "role": "user",
+                "content": [
+                    {
+                    "type": "text",
+                    "text": prompt
+                    },
+                    {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                    }
+                ]
+                }
+            ],
+            "max_tokens": 300
+        }
+        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        manager.add_message_to_thread(role="user", content=prompt)
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        manager.add_message_to_thread(role="assistant", content=response.json()['choices'][0]['message']['content'])
+        print(response.json()['choices'][0]['message']['content'])
+        with st.chat_message("assistant"):
+            st.write(response.json()['choices'][0]['message']['content'])
+        st.session_state.messages.append({"role": "assistant", "content" : response.json()['choices'][0]['message']['content']})
+    else:
+        print("IMAGE NOT FOUND")
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        manager.add_message_to_thread(role="user", content=prompt)
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        manager.run_assistant()
+        response = manager.wait_for_completion()
+        print(response)
+
+        with st.chat_message("assistant"):
+            st.write(response)
+
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+st.session_state.image = st.file_uploader("Add an attachment", type=["pdf", "jpg", "png", "docx"], on_change=callback2)
 
 whisper_stt(openai_api_key= openai_api_key, language = 'en', callback=callback, key="my_stt")  
 
-if uploaded_file is not None:
-    st.success(f"File {uploaded_file.name} uploaded successfully!")
+    
